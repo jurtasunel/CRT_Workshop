@@ -1,0 +1,229 @@
+---
+title: 'Introduction To R: Part Two - Worksheet'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This worksheet accompanies the learning material for Introduction to R: Part Two. 
+Complete the following questions, solutions will be released on Thursday April 30th following the Zoom conference.
+
+## Part One
+1. Create a vector of the first 16 prime numbers.
+```{R}
+
+# Define a funtion that returns TRUE for prime numbers.
+is.prime <- function(number){
+    
+    # Decimal numbers and numbers below 2 are not prime.
+    if (number %% 1 != 0 || number < 2){
+        FALSE
+    # 2 is prime.
+    }else if (number == 2){
+        TRUE
+    # Check if the division of the number by any number up until the previous
+    # one will produce rest 0, which means it is not prime.
+    }else if (any(number %% 2:(number - 1) == 0)){
+        FALSE
+    } else{
+        TRUE
+    }
+}
+# Define a function that returns a sequence of prime numbers with a given length.
+prime.seq <- function(length_of_seq){
+    # Inicialice and empty vector to contain the prime numbers.
+    seq_of_prime_numbers <- c()
+    # Start with the first prime number, the number 2.
+    current_number = 2
+    # Repeat the following loop while the length of the vector is lower than the
+    # given length.
+    while (length(seq_of_prime_numbers) < length_of_seq) {
+        # Set the next number as the current number increased by 1.
+        next_number = current_number + 1
+        # If the current number is prime, append it to the prime numbers vector.
+        if (is.prime(current_number)){
+            seq_of_prime_numbers <- c(seq_of_prime_numbers, current_number)
+        }
+        # Update the current number as the next number.
+        current_number <- next_number
+    }
+    # Return the vector with the sequence of prime numbers.
+    return(seq_of_prime_numbers)
+}
+
+prime_numbers <- prime.seq(16)
+prime_numbers
+```
+
+2. Use this vector to create a 4x4 matrix called ```my_mat``` using default parameters.
+```{R}
+my_mat <- matrix(prime_numbers, ncol = 4, nrow = 4)
+my_mat
+```
+
+3. Add the numbers 1-4 as a new row to the matrix.
+```{R}
+my_mat <- rbind(my_mat, 1:4)
+my_mat
+```
+4. Replace the entry at the position 2,3 with 3.
+```{R}
+my_mat[2,3] = 3
+my_mat
+```
+5. Write a loop that checks if the entries of the fifth row are even. If they are print "You found me", otherwise print "Try again"
+```{R}
+for (value in my_mat[5,]){
+    if (value %% 2 == 0){
+        print(paste0("You found me"))
+    } else{
+        print(paste0("Try again"))
+    }
+}
+# Alternative method with ifelse:
+# for (value in my_mat[5,]){
+#   ifelse(value %%2 == 0, print("You found me"), print("Try again"))
+#   }
+```
+
+6. Remove the third row.
+```{R}
+my_mat <- my_mat[-3,]
+my_mat
+```
+7. Print out the final matrix.
+```{R}
+print(my_mat)
+```
+## Part Two
+You have been asked to analyse the results of a differential expression analysis using DESEQ2<sup>1</sup>. You have been supplied with ```results.txt```, the output of this analysis. This includes:
+- baseMean: The average of the normalised counts per gene across all samples
+- log2FoldChange: Gives an idea of change in expression due to a test condition with respect to control
+- lfcSE: Standard error of log2 fold change
+- pval: P value, the result of a hypothesis test to test whether the change in expression can be attributed to the test condition
+- padj: P value adjusted for multiple testing
+
+1. Read in the file and assign the variable name  ```de```.
+```{R}
+de <- read.table("results.txt", header = TRUE, sep = ";")
+```
+2. Head the first 10 rows.
+```{R}
+head(de, 10)
+```
+3. Tail the last 8 rows of columns 2 to 3.
+```{R}
+tail(de[,2:3],8)
+```
+4. Identify the number of columns and rows.
+```{R}
+dim(de)
+```
+5. Change the name of the third column to "L2FC".
+```{R}
+colnames(de)[3] <- "L2FC"
+```
+6. Extract columns 1:3, rows 1:100 and save as ```sliced_df```. Head the result.
+```{R}
+sliced_df <- de[1:100, 1:3]
+head(sliced_df)
+```
+7. Are there any duplicates? How many? If their are duplicates, remove them, then set the first column as rownames and remove the first column. (Continue with dataframe from 5. ```de``` NOT ```sliced_df```)
+```{R}
+# Find how many duplicates are in de and get the length of that vector.
+length(which(duplicated(de)))
+
+# Remove duplicates.
+de_rmdup <- de[!duplicated(de),]
+# Double check.
+length(which(duplicated(de_rmdup)))
+
+# Set firt column as rownames.
+rownames(de_rmdup) <- de_rmdup[,1]
+# Remove the gene column.
+de_rmdup$Gene <- NULL
+```
+
+8. Are there any missing values? If so, remove rows containing them.
+```{R}
+length(is.na(de_rmdup))
+de_clean <- na.omit(de_rmdup)
+```
+9. The information regarding the following gene was mistakenly left out of the dataset, correct this mistake.
+<<<<<<< HEAD
+   - ENSMUSG00000039287 570.805924  -0.4648999  0.09045180  -5.139752   2.751007e-07    6.393878e-04
+```{R}
+"ENSMUSG00000039287" <- c(570.805924, -0.4648999, 0.09045180, -5.139752, 2.751007e-07, 6.393878e-04)
+rbind(de_clean, "ENSMUSG00000039287")
+```
+=======
+   - ENSMUSG00000039287 570.805924  -0.4648999  0.09045180   2.751007e-07    6.393878e-04
+>>>>>>> 4aaa1a20663e70bd433bc050e8244c21f1ab9fc8
+   
+10. The Wald statistic is generated by dividing log2 fold change by lfcSE and is used to generate the p value. It is missing from this dataset. Add a column that contains a Wald Statistic for each gene and call it ```stat```.
+```{R}
+de_clean$stat <- de_clean$L2FC / de_clean$lfcSE
+```
+
+11. Using both (a) summary and (b) a for loop, find the mean of each column, storing the loop output in a vector.
+```{R}
+summary(de_clean)
+mean_vector <- c()
+for (index in 1:ncol(de_clean)) {
+    mean_vector <- c(mean_vector, summary(de_clean[,index])[4])
+}
+
+```
+12. Print the results of 11.
+```{R}
+print(mean_vector)
+```
+13. How many genes are less than 0.05 in both the pval and padj columns?
+```{R}
+nrow(subset(de_clean, de_clean$pvalue < 0.05 & de_clean$padj < 0.05))
+```
+14. Use a for loop and an if else statement to fill a new column called ```Significance```. If the padj column is less than 0.05 the Significance value should be "Sig" otherwise it should be "Not Sig".
+```{R}
+for (rownum in 1:nrow(de_clean)) {
+    if (de_clean$padj[rownum] < 0.05){
+        de_clean$Significance[rownum] = "Sig"
+    } else {
+        de_clean$Significance[rownum] = "Not Sig"
+    }
+}
+```
+15. There is a cleaner and easier way to do this. Repeat the exercise in 13 without loops or ifelse, except this time add values to the new column ```Expression```. If the value in the ```L2FC``` column is > 1 or less than -1, the corresponding value in ```Expression``` should be "big_change", otherwise it should be "little_change". Hint: Read through section 4.1 - 4.5 of the tutorial for inspiration!
+```{R}
+de_clean$Expression = "little_change"
+de_clean$Expression[abs(de_clean$L2FC) > 1] = "big_change"
+```
+16. Find the dimensions of the dataframe that satisfies the following conditions:
+    pvalue < 0.05 
+    OR
+    L2FC > 1
+```{R}
+dim(de_clean[de_clean$pvalue < 0.05 | de_clean$L2FC > 1,])
+```
+17. Replace ENSMUSG in the rownames with MOUSE.
+```{R}
+rownames(de_clean) <- gsub("ENSMUSG", "MOUSE", rownames(de_clean))
+```
+18. Find the row numbers of all rows whose rownames have the following pattern: "126".
+```{R}
+grep("126", rownames(de_clean))
+```
+19. Select all genes whose expression values < -1 or > 1 and whose adjusted p value is less than 0.05. Call the new dataframe ```interesting_res```.
+```{R}
+interesting_res <- subset(de_clean, abs(de_clean$L2FC) > 1 & de_clean$padj < 0.05)
+```
+20. Order by adjusted p value in increasing order of signifcance. Call the new dataframe ```interesting_res_ordered```.
+```{R}
+interesting_res_ordered <- interesting_res[order(interesting_res$padj),]
+```
+21. Write out the final dataset to a comma separated file called ```DE_RESULTS.csv```. See if you can read it back in without issues.
+```{R}
+write.table(interesting_res_ordered, "DE_RESULTS.csv", col.names = TRUE)
+```
+1. Love, M.I., Huber, W., Anders, S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2 Genome Biology 15(12):550 (2014)
